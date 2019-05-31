@@ -7,8 +7,11 @@
 
 using namespace Gdiplus;
 
-#define WIDTH 1200  // display width
-#define HEIGHT 321  // height (odd number for centre line)
+#define WIDTH   1200  // display width
+#define HEIGHT  321  // height (odd number for centre line)
+
+static int h2       = (HEIGHT/2);
+static int hScope   = (HEIGHT/4);
 
 HWND win=NULL;
 DWORD scanthread=0;
@@ -16,12 +19,9 @@ BOOL killscan=FALSE;
 
 DWORD chan;
 DWORD bpp;          // bytes per pixel
-QWORD loop[2]={0};  // loop start & end
 HSYNC lsync;        // looping sync
 
-HDC wavedc=0;
-HBITMAP wavebmp=0;
-BYTE *wavebuf;
+Bitmap* wavebmp;
 
 CHAR fn[MAX_PATH];
 
@@ -30,9 +30,9 @@ static BOOL playstatus = 0;
 static QWORD seektime = 250000;
 static QWORD endpos;
 
-static Color bgcolor = Color(207, 211, 205);
-static Color wf1colr = Color(126, 129, 130);
-static Color wf2colr = Color(156, 156, 156);
+static Color bgcolor = Color(85, 111, 117);
+static Color wf1colr = Color(0, 0, 0);
+static Color wf2colr = Color(0, 0, 0);
 
 struct LINEPREF
 {
@@ -40,17 +40,20 @@ struct LINEPREF
   Color text;
   Color line;
   DWORD ypos;
+  QWORD xpos;
 };
 
 static LINEPREF pbcolor = {
-  Color(255, 221, 221, 221), Color(255, 33, 33, 33), Color(255, 150, 150, 150), 10
+  Color(255, 221, 221, 221), Color(255, 33, 33, 33), Color(255, 150, 150, 150), (DWORD)10, 0
 };
 static LINEPREF slcolor = {
-  Color(255, 33, 33, 33), Color(255, 136, 204, 51), Color(255, 170, 255, 0), (HEIGHT/2 - 25)
+  Color(255, 33, 33, 33), Color(255, 136, 204, 51), Color(255, 170, 255, 0), (DWORD)(h2-25), 0
 };
 static LINEPREF elcolor = {
-  Color(255, 33, 33, 33), Color(255, 255, 119, 51), Color(255, 255, 68, 0), (HEIGHT/2 + 5)
+  Color(255, 33, 33, 33), Color(255, 255, 119, 51), Color(255, 255, 68, 0), (DWORD)(h2+5), 0
 };
+
+static LINEPREF* lnp[3] = {&pbcolor, &slcolor, &elcolor};
 
 /*  Declare Windows procedure  */
 void DrawTimeLine(HDC*, QWORD, LINEPREF*);
@@ -65,25 +68,29 @@ void Error(const char *es)
 
 void CALLBACK LoopSyncProc(HSYNC handle, DWORD channel, DWORD data, void *user)
 {
-    if (!BASS_ChannelSetPosition(channel,loop[0],BASS_POS_BYTE)) // try seeking to loop start
+    if (!BASS_ChannelSetPosition(channel,lnp[1]->xpos,BASS_POS_BYTE)) // try seeking to loop start
         BASS_ChannelSetPosition(channel,0,BASS_POS_BYTE); // failed, go to start of file instead
 }
 
 void SetLoopStart(QWORD pos)
 {
-    loop[0]=pos;
+    lnp[1]->xpos=pos;
 }
 
 void SetLoopEnd(QWORD pos)
 {
-    loop[1]=pos;
+    lnp[2]->xpos=pos;
     BASS_ChannelRemoveSync(chan,lsync); // remove old sync
-    lsync=BASS_ChannelSetSync(chan,BASS_SYNC_POS|BASS_SYNC_MIXTIME,loop[1],LoopSyncProc,0); // set new sync
+    lsync=BASS_ChannelSetSync(chan,BASS_SYNC_POS|BASS_SYNC_MIXTIME,lnp[2]->xpos,LoopSyncProc,0); // set new sync
 }
 
 // scan the peaks
 void __cdecl ScanPeaks(void *p)
 {
+            Graphics g(wavebmp);
+            Pen wf1pen(wf1colr);
+            Pen wf2pen(wf2colr);
+
     DWORD decoder=(DWORD)p;
     DWORD pos=0;
     float spp=BASS_ChannelBytes2Seconds(decoder,bpp); // seconds per pixel
@@ -102,11 +109,8 @@ void __cdecl ScanPeaks(void *p)
         } else
             BASS_ChannelGetLevelEx(decoder,peak,spp,BASS_LEVEL_STEREO); // scan peaks
         {
-            DWORD a;
-            for (a=0;a<peak[0]*(HEIGHT/4);a++)
-                wavebuf[(HEIGHT/2-a)*WIDTH+pos]=1+a; // draw left peak
-            for (a=0;a<peak[1]*(HEIGHT/4);a++)
-                wavebuf[(HEIGHT/2+a)*WIDTH+pos]=1+a; // draw right peak
+            g.DrawLine(&wf1pen, (int)pos, h2, (int)pos, (int)(h2-(peak[0]*hScope)));
+            g.DrawLine(&wf2pen, (int)pos, h2, (int)pos, (int)(h2+(peak[1]*hScope)));
         }
         pos++;
         if (pos>=WIDTH) break; // reached end of display
@@ -137,30 +141,13 @@ BOOL PlayFile()
         Error("Can't play file");
         return FALSE; // Can't load the file
     }
-    {
         BYTE data[2000]={0};
-        BITMAPINFOHEADER *bh=(BITMAPINFOHEADER*)data;
-        RGBQUAD *pal=(RGBQUAD*)(data+sizeof(*bh));
-        int a;
-        bh->biSize=sizeof(*bh);
-        bh->biWidth=WIDTH;
-        bh->biHeight=-HEIGHT;
-        bh->biPlanes=1;
-        bh->biBitCount=8;
-        bh->biClrUsed=bh->biClrImportant=HEIGHT/2+1;
-        // setup palette
-        for (a=1;a<=HEIGHT/2;a++) {
-            pal[a].rgbRed   = 82;
-            pal[a].rgbGreen = 80;
-            pal[a].rgbBlue  = 80;
-        }
-        // create the bitmap
-        wavebmp=CreateDIBSection(0,(BITMAPINFO*)bh,DIB_RGB_COLORS,(void**)&wavebuf,NULL,0);
-        wavedc=CreateCompatibleDC(0);
-        SelectObject(wavedc,wavebmp);
-        Graphics g(wavedc);
+    {
+        wavebmp = new Bitmap(WIDTH, HEIGHT, PixelFormat32bppRGB);
+        Graphics g(wavebmp);
         g.Clear(bgcolor);
     }
+
     bpp=BASS_ChannelGetLength(chan,BASS_POS_BYTE)/WIDTH; // bytes per pixel
     {
         DWORD bpp1=BASS_ChannelSeconds2Bytes(chan,0.001); // minimum 1ms per pixel
@@ -176,24 +163,17 @@ BOOL PlayFile()
     return TRUE;
 }
 
-void DrawTimeLine(HDC *hdc, QWORD pos, LINEPREF *line, RECT rc)
+void DrawTimeLine(HDC *hdc)
 {
     Graphics graphics(*hdc);
 
-    //Bitmap backBuffer(rc.right, rc.bottom, &graphics);
-    Bitmap backBuffer(wavebmp, 0);
-    //BitBlt(&backBuffer,0,0,WIDTH,HEIGHT,wavedc,0,0,SRCCOPY); // draw peak waveform
-    Graphics g(&backBuffer);
-    //g.Clear(bgcolor);
+    Bitmap* backBuffer = wavebmp->Clone(Rect(0, 0, WIDTH, HEIGHT), PixelFormat32bppRGB);
+    Graphics g(backBuffer);
 
     g.SetSmoothingMode(SmoothingModeHighQuality);
     g.SetTextRenderingHint(TextRenderingHintAntiAlias);
 
-    Pen      lpen(line->line);
-
-    int wpos=pos/bpp;
-
-    g.DrawLine(&lpen, wpos, 0, wpos, HEIGHT);
+    WCHAR text2[16];
 
     FontFamily fontFamily(L"Arial");
     Font font(&fontFamily, 12, FontStyleRegular, UnitPixel);
@@ -201,27 +181,30 @@ void DrawTimeLine(HDC *hdc, QWORD pos, LINEPREF *line, RECT rc)
     StringFormat format;
     format.SetAlignment(StringAlignmentCenter);
     format.SetLineAlignment(StringAlignmentCenter);
+for (int a=0; a<3; a++)
+{
+    if (lnp[a]->xpos){
+        int wpos=lnp[a]->xpos/bpp;
+        Pen  lpen(lnp[a]->line);
+        Pen rpen(lnp[a]->bg);
 
-    SolidBrush fgBrush(line->text);
-    SolidBrush bgBrush(line->bg);
+        g.DrawLine(&lpen, wpos, 0, wpos, HEIGHT);
+        SolidBrush fgBrush(lnp[a]->text);
+        SolidBrush bgBrush(lnp[a]->bg);
 
-    WCHAR text2[16];
-    DWORD time=BASS_ChannelBytes2Seconds(chan,pos)*1000; // position in milliseconds
-    swprintf(text2, L" %u:%02u.%03u ",time/60000,(time/1000)%60,time%1000);
+        DWORD time=BASS_ChannelBytes2Seconds(chan,lnp[a]->xpos)*1000; // position in milliseconds
+        swprintf(text2, L" %u:%02u.%03u ",time/60000,(time/1000)%60,time%1000);
 
-    
-    RectF rectF(wpos<=WIDTH/2?wpos:wpos-70, line->ypos, 70.0f, 20.0f);
+        RectF rectF(wpos<=WIDTH/2?wpos:wpos-70, lnp[a]->ypos, 70.0f, 20.0f);
+        PointF drawPoint(wpos, lnp[a]->ypos);
 
-    PointF drawPoint(wpos, line->ypos);
+        g.DrawRectangle(&rpen, rectF);
+        g.FillRectangle(&bgBrush, rectF);
+        g.DrawString(text2,10,&font, rectF, &format,&fgBrush);
+    }
+}
 
-    Pen rpen(line->bg);
-    g.DrawRectangle(&rpen, rectF);
-    g.FillRectangle(&bgBrush, rectF);
-    g.DrawString(text2,10,&font, rectF, &format,&fgBrush);
-
-    //BitBlt(*hdc,0,0,WIDTH,HEIGHT,wavedc,0,0,SRCCOPY); // draw peak waveform
-
-    graphics.DrawImage(&backBuffer, 0, 0, 0, 0, rc.right, rc.bottom, UnitPixel);
+    graphics.DrawImage(backBuffer, 0, 0, 0, 0, WIDTH, HEIGHT, UnitPixel);
 
 /*
 

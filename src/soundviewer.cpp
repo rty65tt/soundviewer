@@ -4,7 +4,6 @@
     #define UNICODE
 #endif
 
-
 #include <tchar.h>
 #include <windows.h>
 #include <gdiplus.h>
@@ -14,7 +13,6 @@
 #include "bass.h"
 
 using namespace Gdiplus;
-
 
 /*  Declare Windows procedure  */
 LRESULT CALLBACK WaveFormWindowProc (HWND, UINT, WPARAM, LPARAM);
@@ -47,7 +45,6 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine
 		return 0;
 	}
 
-
     /* The Window structure */
     wincl.lpfnWndProc = WaveFormWindowProc;
 	wincl.hInstance = hInstance;
@@ -63,8 +60,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine
     wincl.cbClsExtra = 0;                      /* No extra bytes after the window class */
     wincl.cbWndExtra = 0;                      /* structure or the window instance */
     /* Use Windows's default colour as the background of the window */
-    wincl.hbrBackground = (HBRUSH)(COLOR_BACKGROUND+1);
-
+    wincl.hbrBackground = (HBRUSH) (COLOR_BACKGROUND+1);
 
     /* Register the window class, and if it fails quit the program */
     if (!RegisterClassEx (&wincl))
@@ -133,10 +129,8 @@ LRESULT CALLBACK WaveFormWindowProc(HWND h, UINT m, WPARAM w, LPARAM l)
 		case WM_PAINT:
 			if (GetUpdateRect(h,0,0)) {
 				if (!(hdc=BeginPaint(h,&ps))) return 0;
-				//BitBlt(hdc,0,0,WIDTH,HEIGHT,wavedc,0,0,SRCCOPY); // draw peak waveform
-				//DrawTimeLine(&hdc,loop[0], &slcolor, rc); // loop start
-				//DrawTimeLine(&hdc,loop[1], &elcolor, rc); // loop end
-				DrawTimeLine(&hdc,BASS_ChannelGetPosition(chan,BASS_POS_BYTE), &pbcolor, rc); // current pos
+                lnp[0]->xpos = BASS_ChannelGetPosition(chan,BASS_POS_BYTE);
+				DrawTimeLine(&hdc); // current pos
 				EndPaint(h,&ps);
 			}
 			return 0;
@@ -193,6 +187,11 @@ LRESULT CALLBACK WaveFormWindowProc(HWND h, UINT m, WPARAM w, LPARAM l)
 					playstatus = 1;
 				}
 			}
+            if ((DWORD)w == 0x08)
+            {
+                SetLoopStart(0);
+                SetLoopEnd(0);
+            }
 		break;
 		case WM_DESTROY:
 			KillTimer(h,0);
@@ -201,8 +200,7 @@ LRESULT CALLBACK WaveFormWindowProc(HWND h, UINT m, WPARAM w, LPARAM l)
 				WaitForSingleObject((HANDLE)scanthread,1000); // wait for the thread
 			}
 			BASS_Free();
-			if (wavedc) DeleteDC(wavedc);
-			if (wavebmp) DeleteObject(wavebmp);
+
 			PostQuitMessage(0);
 			break;
 	}
