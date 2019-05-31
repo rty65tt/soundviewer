@@ -109,8 +109,12 @@ void __cdecl ScanPeaks(void *p)
         } else
             BASS_ChannelGetLevelEx(decoder,peak,spp,BASS_LEVEL_STEREO); // scan peaks
         {
-            g.DrawLine(&wf1pen, (int)pos, h2, (int)pos, (int)(h2-(peak[0]*hScope)));
-            g.DrawLine(&wf2pen, (int)pos, h2, (int)pos, (int)(h2+(peak[1]*hScope)));
+            if (peak[0] > 0.001) {
+                g.DrawLine(&wf1pen, (int)pos, h2, (int)pos, (int)(h2-(peak[0]*hScope)));
+            }
+            if (peak[0] > 0.001) {
+                g.DrawLine(&wf2pen, (int)pos, h2, (int)pos, (int)(h2+(peak[1]*hScope)));
+            }
         }
         pos++;
         if (pos>=WIDTH) break; // reached end of display
