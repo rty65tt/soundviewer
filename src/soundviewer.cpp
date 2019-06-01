@@ -17,7 +17,6 @@ using namespace Gdiplus;
 /*  Declare Windows procedure  */
 LRESULT CALLBACK WaveFormWindowProc (HWND, UINT, WPARAM, LPARAM);
 
-
 int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine, int nCmdShow)
 {
 	GdiplusStartupInput gdiplusStartupInput;
@@ -48,7 +47,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine
     /* The Window structure */
     wincl.lpfnWndProc = WaveFormWindowProc;
 	wincl.hInstance = hInstance;
-	wincl.lpszClassName = "Sound Viewer";
+	wincl.lpszClassName = _T("Sound Viewer");
 	wincl.style = CS_DBLCLKS; 
 	wincl.cbSize = sizeof (WNDCLASSEX);
 
@@ -95,7 +94,6 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine
     /* The program return-value is 0 - The value that PostQuitMessage() gave */
     return messages.wParam;
 }
-
 // window procedure
 LRESULT CALLBACK WaveFormWindowProc(HWND h, UINT m, WPARAM w, LPARAM l)
 {

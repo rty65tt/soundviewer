@@ -30,7 +30,10 @@ static BOOL playstatus = 0;
 static QWORD seektime = 250000;
 static QWORD endpos;
 
-static Color bgcolor = Color(85, 111, 117);
+static Color bgcolor = Color(50, 95, 105);
+//static Color bgcolor = Color(95, 95, 97);
+//static Color bgcolor = Color(20, 55, 75);
+//static Color bgcolor = Color(0, 35, 55);
 static Color wf1colr = Color(0, 0, 0);
 static Color wf2colr = Color(0, 0, 0);
 
@@ -41,16 +44,17 @@ struct LINEPREF
   Color line;
   DWORD ypos;
   QWORD xpos;
+  BOOL flag;
 };
 
 static LINEPREF pbcolor = {
-  Color(255, 221, 221, 221), Color(255, 33, 33, 33), Color(255, 150, 150, 150), (DWORD)10, 0
+  Color(255, 221, 221, 221), Color(255, 33, 33, 33), Color(255, 150, 150, 150), (DWORD)10, 0, 0
 };
 static LINEPREF slcolor = {
-  Color(255, 33, 33, 33), Color(255, 136, 204, 51), Color(255, 170, 255, 0), (DWORD)(h2-25), 0
+  Color(255, 33, 33, 33), Color(255, 136, 204, 51), Color(255, 170, 255, 0), (DWORD)(h2-25), 0, 0
 };
 static LINEPREF elcolor = {
-  Color(255, 33, 33, 33), Color(255, 255, 119, 51), Color(255, 255, 68, 0), (DWORD)(h2+5), 0
+  Color(255, 33, 33, 33), Color(255, 255, 119, 51), Color(255, 255, 68, 0), (DWORD)(h2+5), 0, 1
 };
 
 static LINEPREF* lnp[3] = {&pbcolor, &slcolor, &elcolor};
@@ -140,6 +144,7 @@ BOOL PlayFile()
 {
     char *file = fn;
 
+    BASS_PluginLoad("bassflac.dll", 0);
     if (!(chan=BASS_StreamCreateFile(FALSE,file,0,0,0))
         && !(chan=BASS_MusicLoad(FALSE,file,0,0,BASS_MUSIC_RAMPS|BASS_MUSIC_POSRESET|BASS_MUSIC_PRESCAN,1))) {
         Error("Can't play file");
@@ -180,7 +185,7 @@ void DrawTimeLine(HDC *hdc)
     WCHAR text2[16];
 
     FontFamily fontFamily(L"Arial");
-    Font font(&fontFamily, 12, FontStyleRegular, UnitPixel);
+    Font font(&fontFamily, 14, FontStyleRegular, UnitPixel);
 
     StringFormat format;
     format.SetAlignment(StringAlignmentCenter);
@@ -197,35 +202,19 @@ for (int a=0; a<3; a++)
         SolidBrush bgBrush(lnp[a]->bg);
 
         DWORD time=BASS_ChannelBytes2Seconds(chan,lnp[a]->xpos)*1000; // position in milliseconds
-        swprintf(text2, L" %u:%02u.%03u ",time/60000,(time/1000)%60,time%1000);
-
-        RectF rectF(wpos<=WIDTH/2?wpos:wpos-70, lnp[a]->ypos, 70.0f, 20.0f);
+        int cx = swprintf(text2, L" %u:%02u.%03u ",time/60000,(time/1000)%60,time%1000);
+        DWORD fsize =cx*7;
+        int fpos = wpos<=((lnp[a]->flag?WIDTH-fsize:fsize))?wpos:wpos-fsize;
+        RectF rectF(fpos, lnp[a]->ypos, fsize, 20.0f);
         PointF drawPoint(wpos, lnp[a]->ypos);
 
         g.DrawRectangle(&rpen, rectF);
         g.FillRectangle(&bgBrush, rectF);
-        g.DrawString(text2,10,&font, rectF, &format,&fgBrush);
+        g.DrawString(text2,cx,&font, rectF, &format,&fgBrush);
     }
 }
 
     graphics.DrawImage(backBuffer, 0, 0, 0, 0, WIDTH, HEIGHT, UnitPixel);
+    delete backBuffer;
 
-/*
-
-    HPEN pen=CreatePen(PS_SOLID,2,col),oldpen;
-    DWORD wpos=pos/bpp;
-    DWORD time=BASS_ChannelBytes2Seconds(chan,pos)*1000; // position in milliseconds
-    char text[16];
-    sprintf(text," %u:%02u.%03u \n",time/60000,(time/1000)%60,time%1000);
-    oldpen=(HPEN)SelectObject(dc,pen);
-    
-    MoveToEx(dc,wpos,0,NULL);
-    LineTo(dc,wpos,HEIGHT);
-    SetTextColor(dc,txtcol);
-    SetBkColor(dc, bgcol);
-    SetBkMode(dc, OPAQUE);
-    SetTextAlign(dc,wpos>=WIDTH/2?TA_RIGHT:TA_LEFT);
-    TextOut(dc,wpos,y,text,strlen(text));
-    SelectObject(dc,oldpen);
-    DeleteObject(pen);*/
 }
