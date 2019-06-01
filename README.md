@@ -1,6 +1,9 @@
 # SoundViewer
 Fast viewer audio file. Show waveform. Loop playback.
 
+## Download Latest bin
+[soundviewer.zip](https://raw.githubusercontent.com/rty65tt/soundviewer/master/RELEASE/soundviewer.zip)
+
 ## How use
 Work just as associate audio file.
 
