@@ -18,5 +18,5 @@ BackSpace remove loop
 # Mission
 Lite, small, fast utilite for preview sample file.
 
-## In plane
+## In plan
 see TODOList.org
