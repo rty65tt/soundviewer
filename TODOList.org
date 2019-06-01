@@ -1,0 +1,19 @@
+[X] git hub
+[ ] sound Level control
+[ ] window size set from display size
+[ ] ENTER switch Fullscreen 
+[ ] Save settings 
+[ ]  More info
+  - [ ] Print Filename in title
+  - [ ] Help info layer
+[ ] Print scope grid
+[ ] Try find and use lib for draw wafeform (Audacity, FFmpeg, Sonic Visualiser etc.)
+[ ] Try make cross-platform (FLTK + cairo)
+[ ] border
+[ ] Installer associate file for audio.
+[ ] Bind key PageUp/PageDown for Play Next/Prev file in folder
+[ ] Remake All
+[ ] Remake to DAW
+
+* Fix trouble
+[ ] Fix waveformn small files
