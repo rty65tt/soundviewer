@@ -174,16 +174,24 @@ LRESULT CALLBACK WaveFormWindowProc(HWND h, UINT m, WPARAM w, LPARAM l)
 				}
 				
 			}
+            if ((DWORD)w == 0x4C) // If "L"
+            {
+                setloop = (setloop) ? 0 : 1;
+                BASS_ChannelRemoveSync(chan,lsync);
+                if (setloop)
+                {
+                    lsync=BASS_ChannelSetSync(chan,BASS_SYNC_END|BASS_SYNC_MIXTIME,0,LoopSyncProc,0);
+                }
+            }
 			if ((DWORD)w == 0x20)
 			{
-				if (playstatus) {
+
+                if (BASS_ChannelIsActive(chan) == BASS_ACTIVE_PLAYING) {
+                    BASS_ChannelPause(chan);
+                }
+                else {
 					BASS_ChannelPlay(chan, 0);
-					playstatus = 0;
-				}
-				else {
-					BASS_ChannelPause(chan);
-					playstatus = 1;
-				}
+                }
 			}
             if ((DWORD)w == 0x08)
             {
