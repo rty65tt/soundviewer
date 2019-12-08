@@ -79,6 +79,8 @@ void CALLBACK LoopSyncProc(HSYNC handle, DWORD channel, DWORD data, void *user)
 void SetLoopStart(QWORD pos)
 {
     lnp[1]->xpos=pos;
+    int cp = BASS_ChannelGetPosition(chan, BASS_POS_BYTE);
+    if (cp && pos > cp) BASS_ChannelSetPosition(chan,pos,BASS_POS_BYTE); // set current pos
 }
 
 void SetLoopEnd(QWORD pos)
@@ -86,6 +88,8 @@ void SetLoopEnd(QWORD pos)
     lnp[2]->xpos=pos;
     BASS_ChannelRemoveSync(chan,lsync); // remove old sync
     lsync=BASS_ChannelSetSync(chan,BASS_SYNC_POS|BASS_SYNC_MIXTIME,lnp[2]->xpos,LoopSyncProc,0); // set new sync
+    int cp = BASS_ChannelGetPosition(chan, BASS_POS_BYTE);
+    if (cp && pos < cp) BASS_ChannelSetPosition(chan,pos,BASS_POS_BYTE); // set current pos
 }
 
 // scan the peaks
@@ -144,7 +148,10 @@ BOOL PlayFile()
 {
     char *file = fn;
 
+    BASS_PluginLoad("bassalac.dll", 0);
+    BASS_PluginLoad("basswebm.dll", 0);
     BASS_PluginLoad("bassflac.dll", 0);
+    BASS_PluginLoad("bassopus.dll", 0);
     if (!(chan=BASS_StreamCreateFile(FALSE,file,0,0,0))
         && !(chan=BASS_MusicLoad(FALSE,file,0,0,BASS_MUSIC_RAMPS|BASS_MUSIC_POSRESET|BASS_MUSIC_PRESCAN,1))) {
         Error("Can't play file");
