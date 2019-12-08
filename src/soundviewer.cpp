@@ -12,6 +12,8 @@
 #include "resource.h"
 #include "bass.h"
 
+
+
 using namespace Gdiplus;
 
 /*  Declare Windows procedure  */
@@ -32,11 +34,12 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine
 	char dir[_MAX_DIR];
 	char fname[_MAX_FNAME];
 	char ext[_MAX_EXT];
-	_splitpath(lpCmdLine, drive, dir, fname, ext);
+    _splitpath(lpCmdLine, drive, dir, fname, ext);
+    strcat(fn, fname);
+    strcat(fn, ext);
+    fn[strlen(fn) - 1] = ' ';
 
-	strcat(fn, fname);
-	strcat(fn, ext);
-	fn[strlen(fn) - 1] = ' ';
+
 
 	// check the correct BASS was loaded
 	if (HIWORD(BASS_GetVersion())!=BASSVERSION) {
@@ -180,7 +183,7 @@ LRESULT CALLBACK WaveFormWindowProc(HWND h, UINT m, WPARAM w, LPARAM l)
                 BASS_ChannelRemoveSync(chan,lsync);
                 if (setloop)
                 {
-                    lsync=BASS_ChannelSetSync(chan,BASS_SYNC_END|BASS_SYNC_MIXTIME,0,LoopSyncProc,0);
+    lsync=BASS_ChannelSetSync(chan,BASS_SYNC_POS|BASS_SYNC_MIXTIME,lnp[2]->xpos,LoopSyncProc,0); // set new sync
                 }
             }
 			if ((DWORD)w == 0x20)

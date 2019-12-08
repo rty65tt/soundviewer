@@ -23,10 +23,12 @@ HSYNC lsync;        // looping sync
 
 Bitmap* wavebmp;
 
-CHAR fn[MAX_PATH];
+static BOOL isfile = 1;
+static CHAR fn[MAX_PATH];
+
+//static WCHAR status_line[256];
 
 static BOOL setloop = 1;
-static BOOL playstatus = 0;
 static QWORD seektime = 250000;
 static QWORD endpos;
 
@@ -48,7 +50,7 @@ struct LINEPREF
 };
 
 static LINEPREF pbcolor = {
-  Color(255, 221, 221, 221), Color(255, 33, 33, 33), Color(255, 150, 150, 150), (DWORD)10, 0, 0
+  Color(255, 221, 221, 221), Color(255, 33, 33, 33), Color(255, 150, 150, 150), (DWORD)35, 0, 0
 };
 static LINEPREF slcolor = {
   Color(255, 33, 33, 33), Color(255, 136, 204, 51), Color(255, 170, 255, 0), (DWORD)(h2-25), 0, 0
@@ -146,6 +148,19 @@ void __cdecl ScanPeaks(void *p)
 // select a file to play, and start scanning it
 BOOL PlayFile()
 {
+/*    if (!isfile) {
+        char fn[MAX_PATH]="";
+        OPENFILENAME ofn={0};
+        ofn.lStructSize=sizeof(ofn);
+        ofn.hwndOwner=win;
+        ofn.nMaxFile=MAX_PATH;
+        ofn.lpstrFile=fn;
+        ofn.Flags=OFN_FILEMUSTEXIST|OFN_HIDEREADONLY|OFN_EXPLORER;
+        ofn.lpstrTitle="Select a file to play";
+        ofn.lpstrFilter="Playable files\0*.mp3;*.mp2;*.mp1;*.ogg;*.wav;*.aif;*.mo3;*.it;*.xm;*.s3m;*.mtm;*.mod;*.umx\0All files\0*.*\0\0";
+        if (!GetOpenFileName(&ofn)) return FALSE;
+    }*/
+
     char *file = fn;
 
     BASS_PluginLoad("bassalac.dll", 0);
@@ -170,6 +185,7 @@ BOOL PlayFile()
         if (bpp<bpp1) bpp=bpp1;
     }
     lsync=BASS_ChannelSetSync(chan,BASS_SYNC_END|BASS_SYNC_MIXTIME,0,LoopSyncProc,0); // set sync to loop at end
+    BASS_ChannelPlay(chan, FALSE);
      // start playing
     { // create another channel to scan
         DWORD chan2=BASS_StreamCreateFile(FALSE,file,0,0,BASS_STREAM_DECODE);
@@ -220,8 +236,19 @@ for (int a=0; a<3; a++)
         g.DrawString(text2,cx,&font, rectF, &format,&fgBrush);
     }
 }
+Pen rpen(Color(255, 100, 100, 100));
+SolidBrush fgBrush(Color(255, 0, 0, 0));
+SolidBrush bgBrush(Color(255, 120, 120, 120));
+
+wchar_t text3[256];
+int cx = swprintf(text3, L"Loop: %s ", (setloop) ? L"ON" : L"OFF");
+
+RectF rectF(0.0f, 0.0f, WIDTH, 20.0f);
+
+g.DrawRectangle(&rpen, rectF);
+g.FillRectangle(&bgBrush, rectF);
+g.DrawString(text3,cx,&font, rectF, &format,&fgBrush);
 
     graphics.DrawImage(backBuffer, 0, 0, 0, 0, WIDTH, HEIGHT, UnitPixel);
     delete backBuffer;
-
 }
